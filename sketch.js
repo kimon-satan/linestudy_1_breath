@@ -5,7 +5,23 @@
 
 let keyFrames;
 let env;
+let env2;
 let t;
+let breath;
+let breatAmp;
+
+let noiseGen;
+
+let counter;
+let showGraphs;
+
+
+function preload()
+{
+  soundFormats('wav');
+  breath = loadSound('assets/breath.wav');
+}
+
 
 function setup()
 {
@@ -37,19 +53,35 @@ function setup()
 
   keyFrames.push(new SimpleLine(vertices));
 
-  //let data = calcSineEnv(100,0,PI,1,3);
-  let data = calcSplineEnv(100,
-    [0,0,0.05,0.8,
-     1,1,0.05,0,
-     0],
-    [0.1,0.1,0.2,0.2,
-      0.3,1.5,0.1,0.1]
+
+
+  let data = calcLinEnv(100,
+    [0,0,0.95,1,0.95,0,0],
+    [0.01,0.15,0.05,0.15,0.45,0.19 ],
+    [1,0.6,0.5,0.5 ,3,1]
   );
 
   env = new EnvelopeData(data);
 
 
+  data = calcSineEnv(100,0,PI,1,1.5);
+
+  env2 = new EnvelopeData(data);
+
+
+  noiseGen = new NoiseGen(0,width);
+
+  noiseGen.noiseAmp = 30;
+  noiseGen.setSampleHeading(PI/4);
+  noiseGen.setSampleTheta(PI*7/4);
+  noiseGen.setSampleMagnitude(20);
+
+
+  breathAmp = new p5.Amplitude();
+
   t = 0;
+  counter = 0;
+  showGraphs = false;
 
 }
 
@@ -58,15 +90,25 @@ function draw()
   background(255);
   noFill();
 
+  if(breath.isPlaying())
+  {
+    let p = (((millis()-counter)/1000)%breath.duration())/breath.duration();
+    t = env.lin_value(p);
+    noiseGen.update();
+    noiseGen.noiseAmp = map(breathAmp.getLevel(),0,0.1,0,35);
+    noiseGen.setSampleInc(map(breathAmp.getLevel(),0,0.1,0.3,0.05));
+  }
+//noiseGen.update();
 
-  let p = ((millis()/1000)%10)/10;
-  t = env.lin_value(p);
 
-  //console.log(t);
+
 
   //draw the shape
   stroke(0);
   translate(width/2,height/2);
+
+  let pv;
+
   beginShape();
   for(let i = 0; i < 100; i++)
   {
@@ -75,20 +117,72 @@ function draw()
     v1.mult(t);
     v2.mult(1-t);
     let vsum = p5.Vector.add(v1,v2);
-    vertex(vsum.x, vsum.y);
+
+    let normal = createVector(0,0);
+
+    if(pv != undefined)
+    {
+      let v = p5.Vector.sub(vsum,pv);
+      normal = createVector(-v.y,v.x);
+      let n = noiseGen.value(i/100);
+      let xmul = env2.lin_value(i/100);
+      normal.setMag(n * xmul);
+    }
+
+
+    vertex(vsum.x + normal.x, vsum.y + normal.y);
+    pv = vsum;
   }
   endShape();
 
 
-  //draw the envelope
-  stroke(255,0,0);
-  beginShape();
-  for(let i = 0; i < 100; i++)
+  if(showGraphs)
   {
-    let y = env.lin_value(i/100) * 200;
-    vertex(-100 + i * 2, -y);
+
+    //draw the envelope
+    stroke(255,0,0);
+    beginShape();
+    for(let i = 0; i < 100; i++)
+    {
+      let y = -env.lin_value(i/100) * height/2;
+      let x = -width/2 + i * width/100;
+      vertex(x, y);
+    }
+    endShape();
+
+    //draw the noiseGen
+    stroke(0,125 ,0);
+    beginShape();
+    for(let i = 0; i < 100; i++)
+    {
+      let n = noiseGen.value(i/100);
+
+      vertex(-width/2 + i * width/100, n );
+    }
+    endShape();
+
   }
-  endShape();
 
 
+}
+
+function keyPressed()
+{
+  if(key == ' ')
+  {
+    if(!breath.isPlaying())
+    {
+      counter = millis();
+      breath.loop();
+    }
+    else
+    {
+      breath.stop();
+    }
+  }
+
+  if(key == 'v')
+  {
+    showGraphs = !showGraphs;
+  }
 }

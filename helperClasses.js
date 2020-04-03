@@ -1,4 +1,6 @@
 
+
+
 class SimpleLine
 {
 
@@ -23,6 +25,83 @@ class SimpleLine
 
     return p5.Vector.lerp(this.vertices[a], this.vertices[b], remainder);
   }
+
+
+}
+
+class NoiseGen
+{
+
+  sampleVector;
+  sampleCenter;
+  sampleOffset;
+  sampleInc; //move the noise by this vector
+  sampleHeading;
+
+  noiseAmp;
+
+  constructor()
+  {
+
+    this.sampleCenter = createVector(random(0,99999), random(0,99999)); //start in a random position
+    this.sampleVector = createVector(10,0);
+    this.sampleOffset = p5.Vector.div(this.sampleVector, -2); // to draw the sample from the center
+    this.sampleHeading = createVector(1,1);
+    this.sampleInc = 0.05;
+    this.noiseAmp = 50;
+
+  }
+
+  update()
+  {
+     this.sampleCenter.add(p5.Vector.mult(this.sampleHeading, this.sampleInc));
+  }
+
+  value(progress)
+  {
+    let np  = p5.Vector.mult(this.sampleVector, progress);
+    np.add(this.sampleOffset); //set from the center
+
+    let noiseVal = noise(
+      this.sampleCenter.x + np.x,
+      this.sampleCenter.y + np.y
+    );
+
+    let v = map(noiseVal,0.0,1.0,-this.noiseAmp, this.noiseAmp);
+
+    return v;
+  }
+
+  setSampleTheta(theta)
+  {
+    let mag = this.sampleVector.mag();
+    this.sampleVector.x = sin(theta);
+    this.sampleVector.y = cos(theta);
+    this.setSampleMagnitude(mag);
+  }
+
+  setSampleMagnitude(mag)
+  {
+    //println(mag);
+    if(mag > 0)
+    {
+     this.sampleVector.setMag(mag);
+     this.sampleOffset = p5.Vector.div(this.sampleVector, -2); // to draw the sample from the center
+    }
+  }
+
+  setSampleHeading(theta)
+  {
+    //println(theta);
+    this.sampleHeading.x = sin(theta);
+    this.sampleHeading.y = cos(theta);
+  }
+
+  setSampleInc(inc)
+  {
+    this.sampleInc = inc;
+  }
+
 
 
 }
@@ -75,13 +154,14 @@ function calcSineEnv(numPoints,start,end,mul=1,power=1)
   return d;
 }
 
-function calcLinEnv(numPoints, values, durations)
+function calcLinEnv(numPoints, values, durations, interpolation)
 {
     //values is an array
     //durations is an array of one less length than values
 
     let d = [];
     normaliseSum(durations);
+    normalise(values); // make sure we're dealing with 0 - 1 values
 
     for(let i = 0; i < durations.length; i++)
     {
@@ -91,7 +171,20 @@ function calcLinEnv(numPoints, values, durations)
         let t = j/durations[i];
         let va = values[i];
         let vb = values[i+1];
-        d.push(lerp(va,vb,t));
+        let v = lerp(va,vb,t);
+
+        let i_type = (Array.isArray(interpolation)) ? interpolation[i] : interpolation;
+
+        if(typeof(i_type) == "number")
+        {
+          v = pow(v,i_type);
+        }
+        else if(i_type == "sine")
+        {
+
+        }
+
+        d.push(v);
       }
 
     }
@@ -237,70 +330,3 @@ function normalise(data)
 }
 
 ///////////////////////////////////////// JUNK ////////////////////////////////////////////////
-
-
-//Trying to sample at equal distributions
-
-// let segments = [];
-// let y_points = [];
-//
-// for(let i = 0; i < d.length-1; i++)
-// {
-//   let t = abs(d[i+1].x - d[i].x);
-//   segments.push(t);
-// }
-//
-// segments = normaliseSum(segments);
-//
-// var curvePoints = [];
-//
-// for(let i = 0; i < segments.length; i++)
-// {
-//   segments[i] = floor(segments[i] * numPoints);
-//
-//   for(let j = 0; j < segments[i]; j++)
-//   {
-//     curvePoints.push(lerp(d[i].y, d[i+1].y, j/segments[i]));
-//   }
-// }
-// console.log(curvePoints.length);
-// return curvePoints;
-
-
-
-
-function calcCubicCurve(numPoints, controlPoints)
-{
-  //not very useful
-
-  //controlPoints should be a 2D array of coordinates
-
-  let d = [];
-  let segments = [];
-
-  for( i = 0; i < controlPoints.length-1; i++)
-  {
-    let t = (controlPoints[i+1][0] - controlPoints[i][0]);
-    segments.push(t);
-  }
-
-  normaliseSum(segments);
-
-  for(let i = 0; i < segments.length; i++)
-  {
-    segments[i] *= numPoints;
-    for(let j = 0; j < segments[i]; j++)
-    {
-      let p = j/segments[i]; //the proportion for interpolation
-      d.push(cubicInterpolate(
-        controlPoints[max(0,i-1)][1],
-        controlPoints[i][1],
-        controlPoints[min(controlPoints.length-1, i+1)][1],
-        controlPoints[min(controlPoints.length-1,i+2)][1],
-        p));
-    }
-  }
-
-  return d;
-
-}
