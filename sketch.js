@@ -3,6 +3,8 @@
 
 */
 
+//TODO - look at shaping onePole and making a trickle state for when it's inactive
+
 let keyFrames;
 let env;
 let env2;
@@ -14,6 +16,9 @@ let noiseGen;
 
 let counter;
 let showGraphs;
+
+let toggle;
+let onePole;
 
 
 function preload()
@@ -53,8 +58,6 @@ function setup()
 
   keyFrames.push(new SimpleLine(vertices));
 
-
-
   let data = calcLinEnv(100,
     [0,0,0.95,1,0.95,0,0],
     [0.01,0.15,0.05,0.15,0.45,0.19 ],
@@ -78,6 +81,8 @@ function setup()
 
 
   breathAmp = new p5.Amplitude();
+  toggle = new Toggle();
+  onePole = new OnePole2(0.4 ,0.7);
 
   t = 0;
   counter = 0;
@@ -97,10 +102,23 @@ function draw()
     noiseGen.update();
     noiseGen.noiseAmp = map(breathAmp.getLevel(),0,0.1,0,35);
     noiseGen.setSampleInc(map(breathAmp.getLevel(),0,0.1,0.3,0.05));
+
+    toggle.process(breathAmp.getLevel());
+
+    if(toggle.toggle && toggle.isActive)
+    {
+      onePole.targetVal = 1;
+      onePole.process();
+    }
+    else if (!toggle.toggle && toggle.isActive)
+    {
+      onePole.targetVal = 0;
+      onePole.process();
+    }
+
+    //t = onePole.z;
   }
 //noiseGen.update();
-
-
 
 
   //draw the shape
@@ -120,7 +138,7 @@ function draw()
 
     let normal = createVector(0,0);
 
-    if(pv != undefined)
+    if(pv != undefined  )
     {
       let v = p5.Vector.sub(vsum,pv);
       normal = createVector(-v.y,v.x);
