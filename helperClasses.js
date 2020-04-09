@@ -147,7 +147,7 @@ class Toggle
 
   constructor()
   {
-    this.upper_threshold = 0.01;
+    this.upper_threshold = 0.008 ;
     this.lower_threshold = 0.005;
     this.a = 0.95;
     this.b = 1 - this.a;
@@ -170,6 +170,52 @@ class Toggle
       this.isActive = false;
     }
 
+  }
+
+}
+
+class OnePole
+{
+
+  z;
+  a;
+  b;
+  sampleRate;
+  time;
+  targetVal;
+
+  constructor(time,sampleRate=60)
+  {
+    this.sampleRate = sampleRate;
+    this.setTime(time);
+    this.z = 0;
+    this.targetVal = 0;
+  }
+
+  process()
+  {
+    if(this.targetVal == this.z)
+    {
+      return
+    }
+    else
+    {
+      this.z = this.targetVal * this.a + this.z * this.b;
+    }
+  }
+
+  setTime(time)
+  {
+    this.time = time;
+    this.b = Math.exp(-1.0/(this.time * this.sampleRate));
+    this.a = 1.0 - this.b;
+
+  }
+
+  reset()
+  {
+    this.setTime(this.time);
+    this.z = 0.0;
   }
 
 }
@@ -228,6 +274,8 @@ class OnePole2
   }
 
 }
+
+
 
 
 

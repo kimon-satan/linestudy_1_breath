@@ -1,9 +1,6 @@
 /*
  Mimimicing Breath
-
 */
-
-//TODO - look at shaping onePole and making a trickle state for when it's inactive
 
 let keyFrames;
 let env;
@@ -18,7 +15,9 @@ let counter;
 let showGraphs;
 
 let toggle;
-let onePole;
+let pToggleVal;
+let largeOnePole;
+let smallOnePole;
 
 
 function preload()
@@ -82,7 +81,11 @@ function setup()
 
   breathAmp = new p5.Amplitude();
   toggle = new Toggle();
-  onePole = new OnePole2(0.4 ,0.7);
+  toggle.a = 0.97 ;
+  pToggleVal = toggle.isActive;
+
+  largeOnePole = new OnePole2(0.4 ,0.8);
+  smallOnePole = new OnePole(1);
 
   t = 0;
   counter = 0;
@@ -98,27 +101,59 @@ function draw()
   if(breath.isPlaying())
   {
     let p = (((millis()-counter)/1000)%breath.duration())/breath.duration();
-    t = env.lin_value(p);
+    //t = env.lin_value(p);
     noiseGen.update();
     noiseGen.noiseAmp = map(breathAmp.getLevel(),0,0.1,0,35);
     noiseGen.setSampleInc(map(breathAmp.getLevel(),0,0.1,0.3,0.05));
 
     toggle.process(breathAmp.getLevel());
 
-    if(toggle.toggle && toggle.isActive)
+    if(toggle.isActive)
     {
-      onePole.targetVal = 1;
-      onePole.process();
+      if(pToggleVal != toggle.isActive)
+      {
+        //detect a change in activity and update onePole values to match
+        largeOnePole.z = smallOnePole.z;
+        pToggleVal = toggle.isActive;
+      }
+
+      if(toggle.toggle)
+      {
+        largeOnePole.targetVal = 1;
+      }
+      else
+      {
+        largeOnePole.targetVal = 0.1;
+      }
+      largeOnePole.process();
+      t = largeOnePole.z;
     }
-    else if (!toggle.toggle && toggle.isActive)
+    else
     {
-      onePole.targetVal = 0;
-      onePole.process();
+
+      if(pToggleVal != toggle.isActive)
+      {
+        //detect a change in activity and update onePole values to match
+        smallOnePole.z = largeOnePole.z;
+        pToggleVal = toggle.isActive;
+      }
+
+      if(toggle.toggle)
+      {
+          smallOnePole.targetVal = 0.9;
+      }
+      else
+      {
+        smallOnePole.targetVal = 0;
+      }
+
+      smallOnePole.process();
+      t = smallOnePole.z;
     }
 
-    //t = onePole.z;
+
+
   }
-//noiseGen.update();
 
 
   //draw the shape
